@@ -4,3 +4,4 @@
 data
 .ipynb_checkpoints
 my_database.db
+__pycache__
