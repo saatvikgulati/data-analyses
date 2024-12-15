@@ -1,0 +1,6 @@
+.venv
+.idea
+.code
+data
+.ipynb_checkpoints
+my_database.db
