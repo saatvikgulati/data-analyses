@@ -48,7 +48,7 @@ def generate_data(num,f_name):
     # print("Time for saving to disk:",end-st)
 
     st = time.perf_counter()
-    df.to_parquet(f'data/{f_name}',index=False)
+    df.to_csv(f'data/{f_name}',index=False)
     end = time.perf_counter()
     print("Optimized saving time:",end-st)
 
@@ -58,4 +58,4 @@ num = 1000000
 # 'gender': ['Male','Female']
 # }
 
-generate_data(num,'employees.parquet')
+generate_data(num,'employees.csv')

@@ -16,15 +16,15 @@ def input_data(x):
     for i in range(0, x):
         student_data[i] = {}
         student_data[i]['id'] = randint(1, 100)
-        student_data[i]['name'] = fake.name()
-        student_data[i]['address'] = fake.address()
+        student_data[i]['name'] = fake.name().replace('\n',' ').strip()
+        student_data[i]['address'] = fake.address().replace('\n',' ').strip()
         student_data[i]['latitude'] = str(fake.latitude())
         student_data[i]['longitude'] = str(fake.longitude())
     print(student_data)
 
     # dictionary dumped as json in a json file
-    with open('students.json', 'w') as fp:
-        json.dump(student_data, fp)
+    with open('data/students.json', 'w') as fp:
+        json.dump(student_data, fp,indent=2)
 
 
 def main():
