@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 import sqlite3
+import matplotlib.pyplot as plt
 
 def init_db():
     conn = sqlite3.connect('my_database.db')
@@ -17,6 +18,7 @@ def init_db():
             position text
         )
         ''')
+        cursor.execute('create index if not exists idx_employee_id on employees(employee_id)')
         conn.commit()
     except Exception as e:
         st.error('Cannot create table')
@@ -69,6 +71,39 @@ def delete_data(employee_id):
     finally:
         conn.close()
 
+def bulk_insert(df):
+    conn = sqlite3.connect('my_database.db')
+    try:
+        df.columns = ['employee_id','name','gender','date_of_joining','salary','position']
+        df.to_sql('employees',conn,if_exists='append',index=False)
+        st.success(f'Successfully inserted {len(df)} rows into db')
+    except Exception as e:
+        st.error('Error in bulk inserting')
+        st.error(e)
+    finally:
+        conn.close()
+
+def bulk_delete(df):
+    conn = sqlite3.connect('my_database.db')
+    cursor = conn.cursor()
+    try:
+        df.columns = ['employee_id', 'name', 'gender', 'date_of_joining', 'salary', 'position']
+        emp_ids = df["employee_id"].tolist()
+        chunk_size = 999
+        for i in range(0,len(emp_ids),chunk_size):
+            chunk = emp_ids[i:i+chunk_size]
+            placeholders = ','.join(['?']*len(chunk))
+            query = f"delete from employees where employee_id in ({placeholders})"
+            cursor.execute(query,chunk)
+        conn.commit()
+        st.success(f'Deleted {len(df)} rows from db')
+    except Exception as e:
+        st.error('Error in bulk delete')
+        st.error(e)
+    finally:
+        conn.close()
+
+
 def fetch_data():
     conn = sqlite3.connect('my_database.db')
     try:
@@ -80,10 +115,44 @@ def fetch_data():
         conn.close()
         return df
 
+def pie_chart(df):
+    st.subheader('Gender Distribution')
+    gender_counts = df['gender'].value_counts()
+    fig, ax = plt.subplots()
+    ax.pie(gender_counts, labels=gender_counts.index, startangle=90)
+    ax.axis('equal')
+    ax.set_title('Gender Distribution')
+    st.pyplot(fig)
+    st.subheader('Position Distribution')
+    position_counts = df['position'].value_counts()
+    fig, ax = plt.subplots()
+    ax.pie(position_counts, labels=position_counts.index, startangle=90)
+    ax.axis('equal')
+    ax.set_title('Position Distribution')
+    st.pyplot(fig)
+
+def bar_chart(df):
+    st.subheader('Gender Distribution')
+    gender_counts = df['gender'].value_counts()
+    fig,ax = plt.subplots()
+    ax.bar(gender_counts.index,gender_counts,color='skyblue')
+    ax.set_xlabel('Gender')
+    ax.set_ylabel('Count')
+    ax.set_title('Gender Distribution')
+    st.pyplot(fig)
+    st.subheader('Position Distribution')
+    position_counts = df['position'].value_counts()
+    fig,ax = plt.subplots()
+    ax.bar(position_counts.index,position_counts,color='lightgreen')
+    ax.set_xlabel('Position')
+    ax.set_ylabel('Count')
+    ax.set_title('Position Distribution')
+    st.pyplot(fig)
+
 def main():
     st.title('Employee Data Management App')
 
-    tab1,tab2,tab3 = st.tabs(['Add Data','Manage/View/Update/Delete Data','Flood Database'])
+    tab1,tab2,tab3,tab4,tab5 = st.tabs(['Add Data','Manage/View/Update/Delete Data','Flood Database','Bulk Delete','Summary'])
 
     with tab1:
         st.subheader('Add New Employee')
@@ -126,13 +195,57 @@ def main():
                 if update:
                     update_data(selected_employee_id,new_name,new_gender,new_doj,new_salary,new_position)
                     st.experimental_rerun()
-                delete = st.form_submit_button('Delete Employee')
-                if delete:
-                    st.warning('Are you sure you want to delete the employee? This act cannot be undone')
-                    confirm_delete = st.radio('Are you sure?',['No','Yes'])
-                    if confirm_delete=='Yes':
-                        delete_data(selected_employee_id)
-                        st.experimental_rerun()
+
+            delete = st.button('Delete Employee')
+            if delete:
+                delete_data(selected_employee_id)
+                st.experimental_rerun()
+        else:
+            st.info('No records found in db')
+    with tab3:
+        st.subheader('Flood Database')
+        uploaded_file = st.file_uploader('Upload CSV or Excel',type = ['csv','xlsx'],key='flood_uploader')
+
+        if uploaded_file is not None:
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
+            elif uploaded_file.name.endswith('.xlsx'):
+                df = pd.read_excel(uploaded_file)
+            st.write('Uploaded Data: ')
+            st.dataframe(df)
+            flood_database = st.button('Flood Database')
+            if flood_database:
+                bulk_insert(df)
+                st.experimental_rerun()
+
+    with tab4:
+        st.subheader('Bulk Delete ')
+        delete_from_file = st.file_uploader('Upload CSV or Excel',type=['csv','xlsx'],key='delete_uploader')
+        if delete_from_file:
+            if delete_from_file.name.endswith('.csv'):
+                df = pd.read_csv(delete_from_file)
+            elif delete_from_file.name.endswith('.xlsx'):
+                df = pd.read_excel(delete_from_file)
+
+            st.write('Uploaded Data:')
+            st.dataframe(df)
+            many_delete = st.button('Bulk Delete')
+            if many_delete:
+                bulk_delete(df)
+                st.experimental_rerun()
+    with tab5:
+        st.subheader('Summary')
+        data = fetch_data()
+        if not data.empty:
+            chart = st.radio('Chart',['Pie Chart','Bar Chart'],index=0)
+            if chart == 'Pie Chart':
+                pie_chart(data)
+            elif chart == 'Bar Chart':
+                bar_chart(data)
+        else:
+            st.info('No data to display')
+
+
 
 if __name__ == "__main__":
     init_db()
