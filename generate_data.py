@@ -53,9 +53,5 @@ def generate_data(num,f_name):
     print("Optimized saving time:",end-st)
 
 num = 1000000
-# d={'names' : ['Raj','Sam','Shyam','Saatvik','Harshal','Krish','Rajesh'],
-# 'positions' : ["Software Engineer", "Manager", "Analyst", "Designer", "HR Specialist"],
-# 'gender': ['Male','Female']
-# }
 
 generate_data(num,'employees.csv')
